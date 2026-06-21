@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Pembelajaran Interaktif: Pertidaksamaan Linear</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        /* ==========================================================================
+           1. CORE SETUP & RESPONSIVE FRAMEWORK
+           ========================================================================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            /* PERBAIKAN: Mengaktifkan scroll jika layar terlalu kecil */
+            overflow-y: auto; 
+        }
+
+        .presentation-container {
+            position: relative;
+            width: 1280px;
+            height: 720px;
+            background-color: #0b0f19;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            
+            /* PERBAIKAN: Membuat slide responsive agar muat di layar kecil tanpa terpotong */
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* Responsive scaling untuk layar di bawah 1300px */
+        @media screen and (max-width: 1300px) {
+            body {
+                justify-content: flex-start;
+            }
+            .presentation-container {
+                transform: scale(0.9);
+                transform-origin: top center;
+                margin-top: 10px;
+            }
+        }
+        @media screen and (max-width: 1150px) {
+            .presentation-container {
+                transform: scale(0.8);
+            }
+        }
+        @media screen and (max-width: 1000px) {
+            .presentation-container {
+                transform: scale(0.7);
+            }
+        }
+
+        .slide-deck {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .slide-node {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            padding: 50px 60px 90px 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            z-index: 1;
+            /* PERBAIKAN: Jika konten di dalam slide melebihi batas, konten slide bisa di-scroll */
+            overflow-y: auto; 
+        }
+
+        .slide-node.active-slide {
+            opacity: 1;
+            visibility: visible;
+            z-index: 2;
+        }
+
+        .slide-node::after {
+            background: rgba(147, 197, 253, 0.1);
+            bottom: 50px;
+            content: '';
+            height: 1px;
+            left: 60px;
+            position: absolute;
+            right: 60px;
+        }
+
+        /* ==========================================================================
+           2. TYPOGRAPHY & DESIGN SYSTEM
+           ========================================================================== */
+        h1, h2, h3, h4 {
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        span.highlight-text {
+            color: #38bdf8;
+        }
+
+        p, li, span, label {
+            color: #cbd5e1;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+
+        .cover-title {
+            font-size: 64px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 15px;
+        }
+
+        .slide-header-title {
+            font-size: 38px;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 2px dashed rgba(56, 189, 248, 0.2);
+            width: 100%;
+        }
+
+        /* ==========================================================================
+           3. LAYOUT GRID & UI COMPONENTS
+           ========================================================================== */
+        .content-body {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            width: 100%;
+            align-items: center;
+        }
+
+        .info-card {
+            background-color: #131b2e;
+            border: 1px solid #1e293b;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 15px;
+        }
+
+        .info-card h3 {
+            color: #38bdf8;
+            font-size: 22px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .custom-bullet-list {
+            list-style: none;
+            margin-top: 10px;
+        }
+
+        .custom-bullet-list li {
+            padding-left: 30px;
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .custom-bullet-list li::before {
+            color: #38bdf8;
+            content: '➔';
+            left: 0;
+            position: absolute;
+            font-weight: bold;
+        }
+
+        /* ==========================================================================
+           4. INTERACTIVE SYSTEMS (Stopwatch, Inputs, Buttons)
+           ========================================================================== */
+        .stopwatch-box {
+            background: #0f172a;
+            border: 2px solid #1e293b;
+            border-radius: 14px;
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .time-stream {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 42px;
+            color: #f59e0b;
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .control-action-btn {
+            padding: 10px 24px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-start { background: #10b981; color: white; }
+        .btn-start:hover { background: #059669; }
+        .btn-stop { background: #ef4444; color: white; }
+        .btn-stop:hover { background: #dc2626; }
+        .btn-check { background: #38bdf8; color: #0f172a; }
+        .btn-check:hover { background: #0ea5e9; }
+        .btn-discuss { background: #64748b; color: white; }
+        .btn-discuss:hover { background: #475569; }
+
+        /* 50 Questions Grid System */
+        .questions-matrix-scroll {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            max-height: 340px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .matrix-item-node {
+            background: #131b2e;
+            border: 1px solid #1e293b;
+            padding: 12px 16px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .matrix-item-node span {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            color: #f8fafc;
+        }
+
+        .math-input-field {
+            background: #090d16;
+            border: 2px solid #334155;
+            border-radius: 6px;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            padding: 6px 10px;
+            width: 100%;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .math-input-field:focus { border-color: #38bdf8; }
+        .math-input-field.correct { border-color: #10b981 !important; background: #064e3b !important; color: #34d399; }
+        .math-input-field.wrong { border-color: #ef4444 !important; background: #7f1d1d !important; color: #fca5a5; }
+
+        /* Discussion Accordion Box */
+        .discussion-collapse-panel {
+            display: none;
+            margin-top: 15px;
+            padding: 16px;
+            background: #1e1b4b;
+            border-left: 4px solid #6366f1;
+            border-radius: 0 8px 8px 0;
+            font-size: 16px;
+            color: #e0e7ff;
+        }
+
+        /* ==========================================================================
+           5. SYSTEM NAVIGATION CONTROL BAR
+           ========================================================================== */
+        .master-navigation-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: #070a12;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            z-index: 100;
+        }
+
+        .deck-arrows-group { display: flex; gap: 12px; }
+        .deck-trigger-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #f8fafc;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .deck-trigger-btn:hover { background: #334155; color: #38bdf8; }
+        .deck-trigger-btn:disabled { opacity: 0.25; cursor: not-allowed; color: #64748b; }
+
+        .slide-counter-badge {
+            font-size: 14px;
+            font-weight: 600;
+            color: #94a3b8;
+            background: #131b2e;
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 1px solid #1e293b;
+        }
+
+        .timeline-bar-container {
+            position: absolute;
+            bottom: 59px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #111827;
+            z-index: 101;
+        }
+        .timeline-bar-fill {
+            height: 100%;
+            width: 5%;
+            background: linear-gradient(90deg, #38bdf8, #a855f7);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="presentation-container">
+        
+        <div class="timeline-bar-container">
+            <div class="timeline-bar-fill" id="deckProgressBar"></div>
+        </div>
+
+        <div class="slide-deck" id="mainSlideDeck">
+
+            <div class="slide-node active-slide" id="slide_idx_1">
+                <div class="content-body" style="text-align: center; align-items: center;">
+                    <div style="background: #38bdf8; height: 5px; width: 60px; margin-bottom: 25px; border-radius: 2px;"></div>
+                    <h1 class="cover-title">Pertidaksamaan<br><span class="highlight-text">Linear Satu Variabel</span></h1>
+                    <p style="font-size: 24px; max-width: 700px; opacity: 0.8;">Menguasai Konsep Batasan, Aturan Pindah Ruas, Nilai Ekstrim, dan Aplikasi Grafik Spasial</p>
+                    <div style="margin-top: 40px; font-size: 70px; color: #38bdf8; opacity: 0.8;">
+                        <i class="fa-solid fa-less-than-equal"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_2">
+                <h2 class="slide-header-title">Tujuan <span class="highlight-text">Pembelajaran</span></h2>
+                <div class="content-body">
+                    <div class="grid-2col">
+                        <div class="info-card" style="padding: 35px;">
+                            <div style="font-size: 40px; color: #38bdf8; margin-bottom: 20px;"><i class="fa-solid fa-bullseye"></i></div>
+                            <h3 style="font-size: 26px; margin-bottom: 15px; color: #ffffff;">Target Kompetensi Utama</h3>
+                            <p style="font-size: 20px; line-height: 1.6;">Siswa secara mandiri dan percaya diri mampu <strong>menentukan himpunan penyelesaian</strong> dari berbagai variasi pertidaksamaan linear satu variabel, memetakan solusinya pada garis bilangan, serta mengonversinya ke dalam bentuk grafik koordinat.</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <i class="fa-solid fa-graduation-cap" style="font-size: 180px; color: #1e293b;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_3">
+                <h2 class="slide-header-title">Bentuk Dasar & <span class="highlight-text">Himpunan Penyelesaian</span></h2>
+                <div class="content-body">
+                    <div class="grid-2col">
+                        <div>
+                            <div class="info-card">
+                                <h3><i class="fa-solid fa-shapes"></i> 4 Notasi Pertidaksamaan</h3>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 20px; margin-top: 10px; text-align: center;">
+                                    <div style="background:#090d16; padding: 10px; border-radius: 6px;">ax + b &lt; c</div>
+                                    <div style="background:#090d16; padding: 10px; border-radius: 6px;">ax + b &gt; c</div>
+                                    <div style="background:#090d16; padding: 10px; border-radius: 6px;">ax + b &le; c</div>
+                                    <div style="background:#090d16; padding: 10px; border-radius: 6px;">ax + b &ge; c</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="info-card" style="height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                            <h3><i class="fa-solid fa-layer-group"></i> Apa itu Himpunan Penyelesaian?</h3>
+                            <p>Himpunan Penyelesaian (HP) adalah <strong>kumpulan seluruh nilai pengganti variabel x</strong> yang membuat kalimat matematika pertidaksamaan tersebut menjadi bernilai <strong>benar</strong>.</p>
+                            <p style="margin-top: 10px; font-size: 16px; color: #94a3b8;">*Berbeda dengan persamaan biasa yang menghasilkan satu nilai pasti, pertidaksamaan menghasilkan rentang/interval nilai yang tak terhingga.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_4">
+                <h2 class="slide-header-title">Metode <span class="highlight-text">Pindah Ruas</span> & Aturan Pembalikan</h2>
+                <div class="content-body">
+                    <div class="grid-2col">
+                        <div class="info-card" style="border-left: 4px solid #ef4444;">
+                            <h3 style="color: #ef4444;"><i class="fa-solid fa-triangle-exclamation"></i> Aturan Kritis Pembalikan Tanda</h3>
+                            <p style="font-size: 22px; font-weight: 600; margin-bottom: 10px; color: #ffffff;">Jika -x &gt; 5 maka x &lt; -5</p>
+                            <h4 style="color: #cbd5e1; font-weight: 600; margin-bottom: 5px;">Alasan Logis Matematis:</h4>
+                            <p style="font-size: 16px;">Ketika kita membagi atau mengalikan kedua ruas dengan <strong>bilangan negatif</strong> (dalam kasus ini dikali -1), kita sedang membalik posisi nilai pada garis bilangan koordinat. Agar pernyataan logika matematis tersebut tetap bernilai <strong>benar</strong>, arah tanda pertidaksamaan <strong>wajib dibalik arahnya</strong>.</p>
+                        </div>
+                        <div>
+                            <h3>Algoritma Pengerjaan:</h3>
+                            <ul class="custom-bullet-list">
+                                <li>Kelompokkan suku berkabel suku variabel <b>x</b> di ruas kiri.</li>
+                                <li>Pindahkan suku konstanta angka murni ke ruas kanan.</li>
+                                <li>Lakukan penyederhanaan operasi aljabar di masing-masing ruas.</li>
+                                <li><b>Waspada:</b> Balik tanda operasi jika tahap akhir membagi dengan koefisien negatif!</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_5">
+                <h2 class="slide-header-title">Uji Kecepatan Kontrol Balapan: <span class="highlight-text">50 Soal</span></h2>
+                <div class="content-body">
+                    <div class="stopwatch-box">
+                        <div class="time-stream" id="runtimeStopwatchDisplay">00:00:00</div>
+                        <div class="btn-group">
+                            <button class="control-action-btn btn-start" id="stwtStartTrigger" onclick="startGlobalStopwatch()"><i class="fa-solid fa-play"></i> START</button>
+                            <button class="control-action-btn btn-stop" id="stwtStopTrigger" onclick="stopGlobalStopwatch()" disabled><i class="fa-solid fa-stop"></i> STOP</button>
+                        </div>
+                    </div>
+                    <div class="questions-matrix-scroll" id="questionsMatrixContainer">
+                        </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_6">
+                <h2 class="slide-header-title">Laporan <span class="highlight-text">Analisis Kecepatan Siswa</span></h2>
+                <div class="content-body">
+                    <div class="grid-2col" style="margin-bottom: 20px;">
+                        <div class="info-card" style="text-align: center;">
+                            <h3>Total Waktu Pengerjaan</h3>
+                            <p id="analyticsTotalTimeText" style="font-size: 42px; font-weight: 700; color: #f59e0b; font-family: 'JetBrains Mono'; margin-top: 10px;">--:--:--</p>
+                        </div>
+                        <div class="info-card" style="text-align: center;">
+                            <h3>Rata-rata Waktu / Soal Benar</h3>
+                            <p id="analyticsAvgTimeText" style="font-size: 42px; font-weight: 700; color: #10b981; font-family: 'JetBrains Mono'; margin-top: 10px;">-- s</p>
+                        </div>
+                    </div>
+                    <div class="info-card" style="flex-grow: 1; overflow-y: auto; max-height: 200px;">
+                        <h3><i class="fa-solid fa-list-check"></i> Jurnal Log Pencatatan Milestones Waktu</h3>
+                        <div id="analyticsLogsBox" style="font-family: 'JetBrains Mono'; font-size: 14px; color: #94a3b8; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                            <p>Belum ada rekaman log soal terjawab benar...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_7">
+                <h2 class="slide-header-title">Soal Cerita Kontekstual <span class="highlight-text">#1</span></h2>
+                <div class="content-body">
+                    <p style="font-size: 22px; margin-bottom: 20px;">Sebuah mobil boks barang memiliki kapasitas angkut maksimal <b>2000 kg</b>. Jika berat sopir adalah <b>80 kg</b> dan ia mengangkut kotak logistik yang masing-masing beratnya <b>40 kg</b>, tentukan pertidaksamaan untuk jumlah kotak maksimal (x) yang aman diangkut!</p>
+                    <div class="info-card">
+                        <div style="display:flex; gap:15px; align-items:center; margin-bottom:15px;">
+                            <input type="text" class="math-input-field" id="story_input_1" style="max-width:300px;" placeholder="Format: x<=angka">
+                            <button class="control-action-btn btn-check" onclick="verifyStoryCardAnswer(1, 'x<=48')">Cek Jawaban</button>
+                            <button class="control-action-btn btn-discuss" onclick="toggleDiscussionPanel(1)">Buka Pembahasan</button>
+                        </div>
+                        <div class="discussion-collapse-panel" id="disc_panel_1">
+                            <b>Pembahasan:</b><br>
+                            Model Matematika: 40x + 80 &le; 2000<br>
+                            40x &le; 2000 - 80<br>
+                            40x &le; 1920<br>
+                            x &le; 48. Jadi, jumlah kotak maksimal yang diangkut adalah 48 buah.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_8">
+                <h2 class="slide-header-title">Soal Cerita Kontekstual <span class="highlight-text">#2</span></h2>
+                <div class="content-body">
+                    <p style="font-size: 22px; margin-bottom: 20px;">Rian ingin membeli beberapa buku tulis. Harga satu buku tulis adalah <b>Rp 6.000</b>. Jika Rian memiliki uang selembar <b>Rp 50.000</b> dan ingin sisa kembaliannya minimal <b>Rp 8.000</b>, berapa jumlah buku maksimal (x) yang bisa dibeli?</p>
+                    <div class="info-card">
+                        <div style="display:flex; gap:15px; align-items:center; margin-bottom:15px;">
+                            <input type="text" class="math-input-field" id="story_input_2" style="max-width:300px;" placeholder="Format: x<=angka">
+                            <button class="control-action-btn btn-check" onclick="verifyStoryCardAnswer(2, 'x<=7')">Cek Jawaban</button>
+                            <button class="control-action-btn btn-discuss" onclick="toggleDiscussionPanel(2)">Buka Pembahasan</button>
+                        </div>
+                        <div class="discussion-collapse-panel" id="disc_panel_2">
+                            <b>Pembahasan:</b><br>
+                            Sisa uang: 50.000 - 6.000x &ge; 8.000<br>
+                            -6.000x &ge; 8.000 - 50.000<br>
+                            -6.000x &ge; -42.000 (Ingat aturan bagi negatif! Tanda balik)<br>
+                            x &le; 7. Jadi, buku maksimal yang bisa dibeli Rian adalah 7 buku.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_9">
+                <h2 class="slide-header-title">Soal Cerita Kontekstual <span class="highlight-text">#3</span></h2>
+                <div class="content-body">
+                    <p style="font-size: 22px; margin-bottom: 20px;">Keliling sebuah persegi panjang tidak boleh lebih dari <b>70 cm</b>. Jika panjang sisi persegi panjang tersebut adalah <b>(2x + 5) cm</b> dan lebarnya <b>10 cm</b>, tentukan batas nilai x yang memenuhi!</p>
+                    <div class="info-card">
+                        <div style="display:flex; gap:15px; align-items:center; margin-bottom:15px;">
+                            <input type="text" class="math-input-field" id="story_input_3" style="max-width:300px;" placeholder="Format: x<=angka">
+                            <button class="control-action-btn btn-check" onclick="verifyStoryCardAnswer(3, 'x<=10')">Cek Jawaban</button>
+                            <button class="control-action-btn btn-discuss" onclick="toggleDiscussionPanel(3)">Buka Pembahasan</button>
+                        </div>
+                        <div class="discussion-collapse-panel" id="disc_panel_3">
+                            <b>Pembahasan:</b><br>
+                            Keliling = 2(p + l) &le; 70<br>
+                            2((2x + 5) + 10) &le; 70<br>
+                            2(2x + 15) &le; 70 &rarr; 4x + 30 &le; 70<br>
+                            4x &le; 40 &rarr; x &le; 10.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_10">
+                <h2 class="slide-header-title">Soal Cerita Kontekstual <span class="highlight-text">#4</span></h2>
+                <div class="content-body">
+                    <p style="font-size: 22px; margin-bottom: 20px;">Nilai ujian matematika total minimal untuk kelulusan beasiswa adalah <b>300</b> dari total 4 sesi ujian. Soni telah mengikuti 3 sesi dengan nilai <b>72, 85, dan 68</b>. Tentukan nilai minimal (x) yang harus dicapai Soni di sesi ke-4 agar lulus!</p>
+                    <div class="info-card">
+                        <div style="display:flex; gap:15px; align-items:center; margin-bottom:15px;">
+                            <input type="text" class="math-input-field" id="story_input_4" style="max-width:300px;" placeholder="Format: x>=angka">
+                            <button class="control-action-btn btn-check" onclick="verifyStoryCardAnswer(4, 'x>=75')">Cek Jawaban</button>
+                            <button class="control-action-btn btn-discuss" onclick="toggleDiscussionPanel(4)">Buka Pembahasan</button>
+                        </div>
+                        <div class="discussion-collapse-panel" id="disc_panel_4">
+                            <b>Pembahasan:</b><br>
+                            72 + 85 + 68 + x &ge; 300<br>
+                            225 + x &ge; 300<br>
+                            x &ge; 300 - 225 &rarr; x &ge; 75. Nilai minimal sesi ke-4 adalah 75.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_11">
+                <h2 class="slide-header-title">Soal Cerita Kontekstual <span class="highlight-text">#5</span></h2>
+                <div class="content-body">
+                    <p style="font-size: 22px; margin-bottom: 20px;">Sebuah wadah penampungan air menampung debit air sebanyak <b>(5x - 12) liter</b>, dan kuantitas tersebut bernilai lebih dari tangki cadangan kecil yang berisi <b>(2x + 18) liter</b>. Batasi nilai x!</p>
+                    <div class="info-card">
+                        <div style="display:flex; gap:15px; align-items:center; margin-bottom:15px;">
+                            <input type="text" class="math-input-field" id="story_input_5" style="max-width:300px;" placeholder="Format: x>angka">
+                            <button class="control-action-btn btn-check" onclick="verifyStoryCardAnswer(5, 'x>10')">Cek Jawaban</button>
+                            <button class="control-action-btn btn-discuss" onclick="toggleDiscussionPanel(5)">Buka Pembahasan</button>
+                        </div>
+                        <div class="discussion-collapse-panel" id="disc_panel_5">
+                            <b>Pembahasan:</b><br>
+                            5x - 12 &gt; 2x + 18<br>
+                            5x - 2x &gt; 18 + 12<br>
+                            3x &gt; 30 &rarr; x &gt; 10.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_12">
+                <h2 class="slide-header-title">Soal Cerita Kontekstual <span class="highlight-text">#6</span></h2>
+                <div class="content-body">
+                    <p style="font-size: 22px; margin-bottom: 20px;">Perusahaan kurir menetapkan tarif batas pengiriman kilat sebesar <b>Rp 12.000</b> per kg ditambah biaya administrasi tetap sebesar <b>Rp 5.000</b>. Anggaran maksimum Andi untuk mengirim paket adalah <b>Rp 65.000</b>. Batasi berat paket (x) Andi!</p>
+                    <div class="info-card">
+                        <div style="display:flex; gap:15px; align-items:center; margin-bottom:15px;">
+                            <input type="text" class="math-input-field" id="story_input_6" style="max-width:300px;" placeholder="Format: x<=angka">
+                            <button class="control-action-btn btn-check" onclick="verifyStoryCardAnswer(6, 'x<=5')">Cek Jawaban</button>
+                            <button class="control-action-btn btn-discuss" onclick="toggleDiscussionPanel(6)">Buka Pembahasan</button>
+                        </div>
+                        <div class="discussion-collapse-panel" id="disc_panel_6">
+                            <b>Pembahasan:</b><br>
+                            12.000x + 5.000 &le; 65.000<br>
+                            12.000x &le; 60.000<br>
+                            x &le; 5. Berat maksimum paket adalah 5 kg.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_13">
+                <h2 class="slide-header-title">Soal Cerita Kontekstual <span class="highlight-text">#7</span></h2>
+                <div class="content-body">
+                    <p style="font-size: 22px; margin-bottom: 20px;">Suhu operasional sebuah laboratorium server komputer harus dijaga ketat agar selalu kurang dari atau sama dengan <b>24 derajat Celsius</b>. Jika suhu saat ini terdeteksi rumus aljabar <b>(4x - 8) derajat Celsius</b>, tentukan nilai batas variabel x!</p>
+                    <div class="info-card">
+                        <div style="display:flex; gap:15px; align-items:center; margin-bottom:15px;">
+                            <input type="text" class="math-input-field" id="story_input_7" style="max-width:300px;" placeholder="Format: x<=angka">
+                            <button class="control-action-btn btn-check" onclick="verifyStoryCardAnswer(7, 'x<=8')">Cek Jawaban</button>
+                            <button class="control-action-btn btn-discuss" onclick="toggleDiscussionPanel(7)">Buka Pembahasan</button>
+                        </div>
+                        <div class="discussion-collapse-panel" id="disc_panel_7">
+                            <b>Pembahasan:</b><br>
+                            4x - 8 &le; 24<br>
+                            4x &le; 24 + 8<br>
+                            4x &le; 32 &rarr; x &le; 8.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_14">
+                <h2 class="slide-header-title">Soal Cerita Kontekstual <span class="highlight-text">#8</span></h2>
+                <div class="content-body">
+                    <p style="font-size: 22px; margin-bottom: 20px;">Sebuah jembatan penyeberangan kayu kuno memiliki batas aman tonase: muatan berat total di atasnya harus kurang dari <b>1500 kg</b>. Jika sekelompok hewan ternak bermassa total <b>600 kg</b> melintas bersama <b>x</b> orang pemandu berbobot rata-rata <b>60 kg</b>, batasi jumlah orang!</p>
+                    <div class="info-card">
+                        <div style="display:flex; gap:15px; align-items:center; margin-bottom:15px;">
+                            <input type="text" class="math-input-field" id="story_input_8" style="max-width:300px;" placeholder="Format: x<angka">
+                            <button class="control-action-btn btn-check" onclick="verifyStoryCardAnswer(8, 'x<15')">Cek Jawaban</button>
+                            <button class="control-action-btn btn-discuss" onclick="toggleDiscussionPanel(8)">Buka Pembahasan</button>
+                        </div>
+                        <div class="discussion-collapse-panel" id="disc_panel_8">
+                            <b>Pembahasan:</b><br>
+                            60x + 600 &lt; 1500<br>
+                            60x &lt; 1500 - 600<br>
+                            60x &lt; 900 &rarr; x &lt; 15. Jumlah pemandu harus kurang dari 15 orang.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_15">
+                <h2 class="slide-header-title">Soal Cerita Kontekstual <span class="highlight-text">#9</span></h2>
+                <div class="content-body">
+                    <p style="font-size: 22px; margin-bottom: 20px;">Tiga kali umur adik ditambah 4 tahun nilainya masih lebih kecil dibandingkan umur kakaknya yang saat ini menginjak usia <b>22 tahun</b>. Tentukan pertidaksamaan umur adik (x)!</p>
+                    <div class="info-card">
+                        <div style="display:flex; gap:15px; align-items:center; margin-bottom:15px;">
+                            <input type="text" class="math-input-field" id="story_input_9" style="max-width:300px;" placeholder="Format: x<angka">
+                            <button class="control-action-btn btn-check" onclick="verifyStoryCardAnswer(9, 'x<6')">Cek Jawaban</button>
+                            <button class="control-action-btn btn-discuss" onclick="toggleDiscussionPanel(9)">Buka Pembahasan</button>
+                        </div>
+                        <div class="discussion-collapse-panel" id="disc_panel_9">
+                            <b>Pembahasan:</b><br>
+                            3x + 4 &lt; 22<br>
+                            3x &lt; 22 - 4<br>
+                            3x &lt; 18 &rarr; x &lt; 6. Umur adik harus kurang dari 6 tahun.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_16">
+                <h2 class="slide-header-title">Soal Cerita Kontekstual <span class="highlight-text">#10</span></h2>
+                <div class="content-body">
+                    <p style="font-size: 22px; margin-bottom: 20px;">Sebuah proyek pembangunan taman menargetkan pemasangan tiang pembatas besi selesai dalam waktu maksimal <b>12 hari</b>. Tim pekerja sanggup memasang <b>(24 - 2x) tiang</b> per hari. Tentukan rentang batas nilai x!</p>
+                    <div class="info-card">
+                        <div style="display:flex; gap:15px; align-items:center; margin-bottom:15px;">
+                            <input type="text" class="math-input-field" id="story_input_10" style="max-width:300px;" placeholder="Format: x<=angka">
+                            <button class="control-action-btn btn-check" onclick="verifyStoryCardAnswer(10, 'x<=6')">Cek Jawaban</button>
+                            <button class="control-action-btn btn-discuss" onclick="toggleDiscussionPanel(10)">Buka Pembahasan</button>
+                        </div>
+                        <div class="discussion-collapse-panel" id="disc_panel_10">
+                            <b>Pembahasan:</b><br>
+                            Operasi rasio target hari menghendaki eliminasi sisa:<br>
+                            24 - 2x &le; 12 &rarr; -2x &le; 12 - 24<br>
+                            -2x &le; -12 (Bagi negatif, tanda berbalik!) &rarr; x &ge; 6.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_17">
+                <h2 class="slide-header-title">Konstruksi <span class="highlight-text">Grafik Geometri DHP</span></h2>
+                <div class="content-body">
+                    <div class="grid-2col">
+                        <div>
+                            <p style="font-size: 16px; margin-bottom: 10px;">Pemetaan grafik dasarnya identik dengan persamaan linear biasa, perbedaannya terletak pada wilayah luasan arsir <strong>Daerah Himpunan Penyelesaian (DHP)</strong>:</p>
+                            <div class="info-card" style="padding: 15px; font-size:15px;">
+                                <b>Aturan Arah Arsiran Kuadran Standar:</b><br>
+                                ➔ Jika simbol bertanda <b>&gt;</b> atau <b>&ge;</b> : DHP mengarah ke <b>Kanan Atas</b>.<br>
+                                ➔ Jika simbol bertanda <b>&lt;</b> atau <b>&le;</b> : DHP mengarah ke <b>Kiri Bawah</b>.<br>
+                                ➔ *Jika grafik miring tajam ke kanan, wajib lakukan <b>Uji Titik Sembarang (0,0)</b>.
+                            </div>
+                            <div class="info-card" style="padding: 15px; font-size:15px; border-left:4px solid #38bdf8;">
+                                <b>Ketegasan Tipe Garis Batas:</b><br>
+                                ➔ Simbol murni (<b>&lt;</b> atau <b>&gt;</b>) menggunakan <b>Garis Putus-Putus</b>.<br>
+                                ➔ Simbol sama dengan (<b>&le;</b> atau <b>&ge;</b>) menggunakan <b>Garis Tegas Lurus</b>.
+                            </div>
+                        </div>
+                        <div style="text-align: center;">
+                            <p style="font-size:16px; margin-bottom:15px;">Gunakan Sandbox GeoGebra untuk simulasi realtime:</p>
+                            <button class="control-action-btn btn-check" style="padding:15px 30px; font-size:16px;" onclick="window.open('https://www.geogebra.org/graphing', '_blank')">
+                                <i class="fa-solid fa-square-poll-vertical"></i> BUKA SITES GEOGEBRA
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_18">
+                <h2 class="slide-header-title">Materi Pembahasan <span class="highlight-text">Berikutnya</span></h2>
+                <div class="content-body" style="text-align: center; align-items: center;">
+                    <h1 style="font-size: 56px; margin-bottom: 15px;">Sistem Program Linear</h1>
+                    <p style="max-width: 750px; font-size: 20px; opacity: 0.85;">Kita akan meningkatkan level dengan menggabungkan beberapa pertidaksamaan sekaligus untuk mengisolasi titik pojok ekstrim demi mencari nilai optimasi keuntungan terbesar di dunia industri manufaktur.</p>
+                    <div style="margin-top: 30px; font-size: 60px; color: #a855f7;"><i class="fa-solid fa-circle-arrow-right"></i></div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_19">
+                <h2 class="slide-header-title">Ruang <span class="highlight-text">Refleksi & Kesimpulan</span></h2>
+                <div class="content-body">
+                    <div class="grid-2col">
+                        <div class="info-card">
+                            <h3><i class="fa-solid fa-clipboard-question"></i> Intisari Evaluasi</h3>
+                            <ul class="custom-bullet-list" style="font-size: 15.5px;">
+                                <li>Pertidaksamaan memetakan rentang solusi realitas, bukan titik tunggal tunggal.</li>
+                                <li>Perkalian/pembagian koefisien negatif membalik mutlak arah tanda logis.</li>
+                                <li>Jenis simbol menentukan tegas/tidaknya garis tepi batas kurva grafik.</li>
+                            </ul>
+                        </div>
+                        <div class="info-card" style="border: 1px solid rgba(168, 85, 247, 0.4);">
+                            <h3>Refleksi Pembelajaran</h3>
+                            <p style="font-style: italic; font-size: 16.5px; line-height: 1.6;">"Memahami pertidaksamaan mengajarkan kita bahwa hidup ini penuh dengan ruang batas ambang toleransi. Sukses dicapai ketika kita mampu mengoptimalkan ruang gerak di dalam batasan tersebut."</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-node" id="slide_idx_20">
+                <div class="content-body" style="text-align: center; align-items: center;">
+                    <h1 style="font-size: 72px; margin-bottom: 15px;">THANK YOU!</h1>
+                    <p style="font-size: 24px; color: #38bdf8;">Sesi Kelas Pertidaksamaan Linear Selesai</p>
+                    <div style="margin-top: 40px; font-size: 80px; color: #f59e0b;"><i class="fa-solid fa-face-smile-wink"></i></div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="master-navigation-bar">
+            <div class="deck-arrows-group">
+                <button class="deck-trigger-btn" id="deckPrevActionTrigger" onclick="navigateSlideDeckIndex(-1)" disabled>
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <button class="deck-trigger-btn" id="deckNextActionTrigger" onclick="navigateSlideDeckIndex(1)">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="slide-counter-badge" id="slideBadgeTrackerText">Slide 1 / 20</div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentActiveSlideIdx = 1;
+        const totalSlidesInDeck = 20;
+
+        // Stopwatch Core States
+        let stopwatchStartTimeStamp = null;
+        let stopwatchIntervalLoop = null;
+        let elapsedMillisecondsCounter = 0;
+        let verifiedAnswersLogArray = [];
+
+        // 50 Questions Dataset Repo (Statis Struktural)
+        const mathQuestionsBank = [
+            { q: "x + 4 > 9", a: "x>5" }, { q: "x - 2 < 7", a: "x<9" }, { q: "3x > 12", a: "x>4" },
+            { q: "-x > 6", a: "x<-6" }, { q: "2x + 1 ≤ 9", a: "x<=4" }, { q: "x/3 ≥ 2", a: "x>=6" },
+            { q: "8 - x < 3", a: "x>5" }, { q: "4x ≤ 24", a: "x<=6" }, { q: "-2x < 10", a: "x>-5" },
+            { q: "x + 7 ≥ 4", a: "x>=-3" }, { q: "2x - 3 > 5", a: "x>4" }, { q: "5 - x ≥ 2", a: "x<=3" },
+            { q: "x/4 < -1", a: "x<-4" }, { q: "3x + 6 ≤ 0", a: "x<=-2" }, { q: "-3x > 15", a: "x<-5" },
+            { q: "x - 10 ≤ -2", a: "x<=8" }, { q: "6x > 36", a: "x>6" }, { q: "7 - 2x < 1", a: "x>3" },
+            { q: "x/2 + 1 > 4", a: "x>6" }, { q: "4x - 5 ≥ 11", a: "x>=4" }, { q: "-x/3 < 2", a: "x>-6" },
+            { q: "2x + 7 < 1", a: "x<-3" }, { q: "9 - x ≤ 15", a: "x>=-6" }, { q: "5x - 2 > 13", a: "x>3" },
+            { q: "3x + 4 ≤ 19", a: "x<=5" }, { q: "-4x ≥ -16", a: "x<=4" }, { q: "x - 8 > -12", a: "x>-4" },
+            { q: "2x/3 < 6", a: "x<9" }, { q: "10 - 3x ≥ 1", a: "x<=3" }, { q: "4x + 8 < 24", a: "x<4" },
+            { q: "-5x < -25", a: "x>5" }, { q: "x + 12 ≤ 5", a: "x<=-7" }, { q: "3x - 1 > 14", a: "x>5" },
+            { q: "6 - 2x ≥ 10", a: "x<=-2" }, { q: "x/5 + 3 < 5", a: "x<10" }, { q: "2x + 9 ≤ 1", a: "x<=-4" },
+            { q: "-x - 4 > 2", a: "x<-6" }, { q: "4x - 3 ≥ 17", a: "x>=5" }, { q: "7x ≤ 49", a: "x<=7" },
+            { q: "8 - x/2 > 6", a: "x<4" }, { q: "3x + 5 < 20", a: "x<5" }, { q: "-2x + 7 ≤ 1", a: "x>=3" },
+            { q: "x - 15 ≥ -5", a: "x>=10" }, { q: "5x + 3 > 18", a: "x>3" }, { q: "12 - x < 4", a: "x>8" },
+            { q: "2x/5 ≥ -2", a: "x>=-5" }, { q: "4x + 10 ≤ 2", a: "x<=-2" }, { q: "-3x - 2 < 10", a: "x>-4" },
+            { q: "x - 1 > 19", a: "x>20" }, { q: "6x - 4 ≤ 20", a: "x<=4" }
+        ];
+
+        function navigateSlideDeckIndex(direction) {
+            const previousSlideDom = document.getElementById(`slide_idx_${currentActiveSlideIdx}`);
+            let targetIdx = currentActiveSlideIdx + direction;
+
+            if (targetIdx < 1 || targetIdx > totalSlidesInDeck) return;
+
+            const targetSlideDom = document.getElementById(`slide_idx_${targetIdx}`);
+            previousSlideDom.classList.remove('active-slide');
+            targetSlideDom.classList.add('active-slide');
+
+            currentActiveSlideIdx = targetIdx;
+            synchronizeNavigationUIControls();
+        }
+
+        function synchronizeNavigationUIControls() {
+            document.getElementById('slideBadgeTrackerText').innerText = `Slide ${currentActiveSlideIdx} / ${totalSlidesInDeck}`;
+            document.getElementById('deckPrevActionTrigger').disabled = (currentActiveSlideIdx === 1);
+            document.getElementById('deckNextActionTrigger').disabled = (currentActiveSlideIdx === totalSlidesInDeck);
+
+            const timelineWidthPercent = (currentActiveSlideIdx / totalSlidesInDeck) * 100;
+            document.getElementById('deckProgressBar').style.width = `${timelineWidthPercent}%`;
+        }
+
+        /* --------------------------------------------------------------------------
+           STOPWATCH SYSTEM ENGINE
+           -------------------------------------------------------------------------- */
+        function startGlobalStopwatch() {
+            stopwatchStartTimeStamp = Date.now() - elapsedMillisecondsCounter;
+            stopwatchIntervalLoop = setInterval(updateStopwatchUIStream, 10);
+            
+            document.getElementById('stwtStartTrigger').disabled = true;
+            document.getElementById('stwtStopTrigger').disabled = false;
+        }
+
+        function stopGlobalStopwatch() {
+            clearInterval(stopwatchIntervalLoop);
+            document.getElementById('stwtStartTrigger').disabled = false;
+            document.getElementById('stwtStopTrigger').disabled = true;
+            processPerformanceMetricsReport();
+        }
+
+        function updateStopwatchUIStream() {
+            elapsedMillisecondsCounter = Date.now() - stopwatchStartTimeStamp;
+            document.getElementById('runtimeStopwatchDisplay').innerText = formatTimeToString(elapsedMillisecondsCounter);
+        }
+
+        function formatTimeToString(totalTimeMs) {
+            let spaceSec = totalTimeMs / 1000;
+            let minOut = Math.floor(spaceSec / 60);
+            let secOut = Math.floor(spaceSec % 60);
+            let msOut = Math.floor((totalTimeMs % 1000) / 10);
+            return `${minOut.toString().padStart(2, '0')}:${secOut.toString().padStart(2, '0')}:${msOut.toString().padStart(2, '0')}`;
+        }
+
+        /* --------------------------------------------------------------------------
+           QUESTIONS GENERATOR & VERIFICATION LOGIC
+           -------------------------------------------------------------------------- */
+        function bootstrapQuestionsMatrixGenerator() {
+            const gridContainer = document.getElementById('questionsMatrixContainer');
+            gridContainer.innerHTML = "";
+
+            mathQuestionsBank.forEach((item, index) => {
+                const node = document.createElement('div');
+                node.className = "matrix-item-node";
+                node.innerHTML = `
+                    <span><b>${index + 1}.</b> ${item.q}</span>
+                    <input type="text" class="math-input-field" id="matrix_input_${index}" oninput="evaluateMatrixInputNode(${index}, '${item.a}')" placeholder="Jawaban">
+                `;
+                gridContainer.appendChild(node);
+            });
+        }
+
+        function evaluateMatrixInputNode(itemIndex, correctKeyString) {
+            const inputElement = document.getElementById(`matrix_input_${itemIndex}`);
+            const cleanUserString = inputElement.value.replace(/\s+/g, '').toLowerCase();
+
+            if (cleanUserString === correctKeyString.replace(/\s+/g, '').toLowerCase()) {
+                if (!inputElement.classList.contains('correct')) {
+                    inputElement.className = "math-input-field correct";
+                    inputElement.disabled = true;
+
+                    // Catat milestone waktu
+                    const activeTimeStampString = document.getElementById('runtimeStopwatchDisplay').innerText;
+                    verifiedAnswersLogArray.push({ id: itemIndex + 1, timestamp: activeTimeStampString, rawMs: elapsedMillisecondsCounter });
+                    appendNewLogNodeToAnalyticsPanel(itemIndex + 1, activeTimeStampString);
+
+                    // Auto-stop jika seluruh 50 soal terpenuhi tuntas
+                    if (verifiedAnswersLogArray.length === 50) {
+                        stopGlobalStopwatch();
+                    }
+                }
+            } else if (cleanUserString.length >= correctKeyString.length) {
+                inputElement.className = "math-input-field wrong";
+            } else {
+                inputElement.className = "math-input-field";
+            }
+        }
+
+        function appendNewLogNodeToAnalyticsPanel(qId, timeString) {
+            const logsBox = document.getElementById('analyticsLogsBox');
+            if (verifiedAnswersLogArray.length === 1) logsBox.innerHTML = ""; // Bersihkan text default awal
+
+            const pNode = document.createElement('p');
+            pNode.innerHTML = `<i class="fa-solid fa-check text-success"></i> Soal ${qId}: <span style="color:#f59e0b">${timeString}</span>`;
+            logsBox.appendChild(pNode);
+        }
+
+        function processPerformanceMetricsReport() {
+            if (verifiedAnswersLogArray.length === 0) return;
+
+            const finalLogObject = verifiedAnswersLogArray[verifiedAnswersLogArray.length - 1];
+            document.getElementById('analyticsTotalTimeText').innerText = finalLogObject.timestamp;
+
+            // Hitung nilai rata-rata durasi detik per butir soal benar
+            const totalSecondsSpent = finalLogObject.rawMs / 1000;
+            const absoluteAverage = (totalSecondsSpent / verifiedAnswersLogArray.length).toFixed(2);
+            document.getElementById('analyticsAvgTimeText').innerText = `${absoluteAverage} s`;
+        }
+
+        /* --------------------------------------------------------------------------
+           STORY DRIVEN QUESTIONS INTERACTION ENGINE
+           -------------------------------------------------------------------------- */
+        function verifyStoryCardAnswer(storyId, exactSolutionKey) {
+            const inputDom = document.getElementById(`story_input_${storyId}`);
+            const sanitizedString = inputDom.value.replace(/\s+/g, '').toLowerCase();
+
+            if (sanitizedString === exactSolutionKey.toLowerCase()) {
+                inputDom.className = "math-input-field correct";
+            } else {
+                inputDom.className = "math-input-field wrong";
+            }
+        }
+
+        function toggleDiscussionPanel(storyId) {
+            const targetPanel = document.getElementById(`disc_panel_${storyId}`);
+            const isVisible = window.getComputedStyle(targetPanel).display === 'block';
+            targetPanel.style.display = isVisible ? 'none' : 'block';
+        }
+
+        /* INITIALIZATION LIFECYCLE HOOKS */
+        window.addEventListener('DOMContentLoaded', () => {
+            bootstrapQuestionsMatrixGenerator();
+            synchronizeNavigationUIControls();
+        });
+    </script>
+</body>
+</html>
